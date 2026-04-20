@@ -4,13 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --force",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
+    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
+    "test": "vitest run"
   },
   "dependencies": {
-    "socket.io-client": "^4.8.1"
+    "@automerge/automerge": "^3.2.5",
+    "@automerge/automerge-repo": "^2.5.5",
+    "automerge-sockets-io-adapter": "file:../.."
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.15",

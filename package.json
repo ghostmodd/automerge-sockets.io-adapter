@@ -2,23 +2,40 @@
   "name": "automerge-sockets-io-adapter",
   "version": "1.0.0",
   "description": "Local playground for Automerge + Socket.IO adapter",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build:lib": "tsc -p tsconfig.build.json",
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "pnpm --filter client dev",
     "dev:server": "pnpm --filter server dev",
-    "build": "pnpm --filter client build && pnpm --filter server build"
+    "build": "pnpm build:lib && pnpm --filter client build && pnpm --filter server build",
+    "test": "pnpm --filter client test && pnpm --filter server test"
   },
   "private": true,
   "license": "MIT",
   "dependencies": {
     "@automerge/automerge-repo": "^2.5.5",
     "debug": "^4.4.3",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@types/debug": "^4.1.13",
     "concurrently": "^9.2.1",
     "prettier": "^3.8.3",
-    "prettier-plugin-svelte": "^3.5.1"
+    "prettier-plugin-svelte": "^3.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

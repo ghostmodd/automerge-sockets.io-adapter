@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@automerge/automerge": "^3.2.5",
+    "@automerge/automerge-repo": "^2.5.5",
     "@hono/node-server": "^1.19.5",
+    "automerge-sockets-io-adapter": "file:../..",
     "hono": "^4.10.3",
     "socket.io": "^4.8.3"
   },

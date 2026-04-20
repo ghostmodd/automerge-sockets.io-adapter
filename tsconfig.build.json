@@ -4,12 +4,14 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"],
-    "outDir": "dist"
+    "outDir": "dist",
+    "rootDir": "src"
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"]
+  "include": ["src/**/*.ts"]
 }
