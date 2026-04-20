@@ -12,9 +12,11 @@
   "license": "MIT",
   "dependencies": {
     "@automerge/automerge-repo": "^2.5.5",
+    "debug": "^4.4.3",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
+    "@types/debug": "^4.1.13",
     "concurrently": "^9.2.1",
     "prettier": "^3.8.3",
     "prettier-plugin-svelte": "^3.5.1"
