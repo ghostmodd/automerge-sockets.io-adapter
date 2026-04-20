@@ -1,20 +1,31 @@
 import { serve } from "@hono/node-server"
+import { Repo } from "@automerge/automerge-repo"
+import { SocketIOServerAdapter } from "automerge-sockets-io-adapter"
 import { Hono } from "hono"
+import { cors } from "hono/cors"
 import { Server as SocketIOServer } from "socket.io"
-import * as Automerge from "@automerge/automerge"
+import { resolvePort } from "./port.js"
 
-type SharedState = {
-  pings: number
+type PingEvent = {
+  id: string
+  by: string
+  at: string
 }
 
-let sharedState = Automerge.from<SharedState>({ pings: 0 })
+type SharedState = {
+  events: PingEvent[]
+}
 
 const app = new Hono()
+const port = resolvePort(process.env.PORT)
+const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173"
 
-app.get("/", (c) => c.text("Hono + Socket.IO server is running"))
+app.use("*", cors({ origin: clientOrigin }))
+
+app.get("/", (c) =>
+  c.text("Hono + Socket.IO + Automerge Repo server is running"),
+)
 app.get("/health", (c) => c.json({ ok: true }))
-
-const port = Number(process.env.PORT ?? 3000)
 
 const httpServer = serve(
   {
@@ -28,29 +39,22 @@ const httpServer = serve(
 
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: ["http://localhost:5173"],
+    origin: clientOrigin,
     methods: ["GET", "POST"],
   },
 })
-
-io.on("connection", (socket) => {
-  console.log(`Socket connected: ${socket.id}`)
-  socket.emit("server:message", "Socket.IO is connected to Hono server")
-
-  socket.on("ping", (payload: { count?: number }) => {
-    sharedState = Automerge.change(sharedState, (doc) => {
-      doc.pings += 1
-    })
-
-    io.emit("pong", {
-      from: socket.id,
-      count: payload?.count ?? 0,
-      totalPings: sharedState.pings,
-      at: new Date().toISOString(),
-    })
-  })
-
-  socket.on("disconnect", () => {
-    console.log(`Socket disconnected: ${socket.id}`)
-  })
+const repo = new Repo({
+  network: [new SocketIOServerAdapter(io)],
 })
+
+const sharedHandle = repo.create<SharedState>({
+  events: [],
+})
+const sharedDocumentId = sharedHandle.documentId
+
+app.get("/document", (c) =>
+  c.json({
+    documentId: sharedDocumentId,
+    serverPeerId: repo.peerId,
+  }),
+)
