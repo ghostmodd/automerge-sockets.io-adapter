@@ -63,3 +63,15 @@ export const isPeerMessage = (
 export const isErrorMessage = (
   message: FromServerMessage,
 ): message is ErrorMessage => message.type === "error"
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null
+
+export const hasMessageTypeAndSenderId = (
+  message: unknown,
+): message is { type: string; senderId: string } => {
+  if (!isObjectRecord(message)) return false
+  return (
+    typeof message.type === "string" && typeof message.senderId === "string"
+  )
+}

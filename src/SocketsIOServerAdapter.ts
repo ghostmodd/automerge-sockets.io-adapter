@@ -1,5 +1,3 @@
-import WebSocket from "isomorphic-ws"
-import { type WebSocketServer } from "isomorphic-ws"
 import debug from "debug"
 
 const log = debug("WebsocketServer")
@@ -13,16 +11,19 @@ import {
 import {
   FromClientMessage,
   FromServerMessage,
+  hasMessageTypeAndSenderId,
   isJoinMessage,
 } from "./messages.js"
 import { ProtocolV1, ProtocolVersion } from "./protocolVersion.js"
-import { assert } from "./assert"
-import { toArrayBuffer } from "./toArrayBuffer"
+import { assert } from "./assert.js"
+import { toArrayBuffer } from "./toArrayBuffer.js"
+import { toUint8ArrayPayload } from "./socketIoPayload.js"
+import { Server, Socket } from "socket.io"
 
 const { encode, decode } = cborHelpers
 
-export class WebSocketServerAdapter extends NetworkAdapter {
-  sockets: { [peerId: PeerId]: WebSocket } = {}
+export class SocketIOServerAdapter extends NetworkAdapter {
+  sockets: { [peerId: PeerId]: Socket } = {}
 
   #ready = false
   #readyResolver?: () => void
@@ -46,7 +47,7 @@ export class WebSocketServerAdapter extends NetworkAdapter {
   }
 
   constructor(
-    private server: WebSocketServer,
+    private server: Server,
     private keepAliveInterval = 5000,
   ) {
     super()
@@ -57,47 +58,32 @@ export class WebSocketServerAdapter extends NetworkAdapter {
     this.peerMetadata = peerMetadata
 
     this.server.on("close", () => {
-      clearInterval(keepAliveId)
       this.disconnect()
     })
 
-    this.server.on("connection", (socket: WebSocketWithIsAlive) => {
-      // When a socket closes, or disconnects, remove it from our list
-      socket.on("close", () => {
+    this.server.on("connection", (socket: Socket) => {
+      socket.on("message", (payload: unknown) => {
+        const messageBytes = toUint8ArrayPayload(payload)
+        if (!messageBytes) {
+          log("dropping invalid socket payload")
+          return
+        }
+
+        this.receiveMessage(messageBytes, socket)
+      })
+
+      socket.on("disconnect", () => {
         this.#removeSocket(socket)
       })
 
-      socket.on("message", (message) =>
-        this.receiveMessage(message as Uint8Array, socket),
-      )
-
-      // Start out "alive", and every time we get a pong, reset that state.
-      socket.isAlive = true
-      socket.on("pong", () => (socket.isAlive = true))
-
       this.#forceReady()
     })
-
-    const keepAliveId = setInterval(() => {
-      // Terminate connections to lost clients
-      const clients = this.server.clients as Set<WebSocketWithIsAlive>
-      clients.forEach((socket) => {
-        if (socket.isAlive) {
-          // Mark all clients as potentially dead until we hear from them
-          socket.isAlive = false
-          socket.ping()
-        } else {
-          this.#terminate(socket)
-        }
-      })
-    }, this.keepAliveInterval)
   }
 
   disconnect() {
-    const clients = this.server.clients as Set<WebSocketWithIsAlive>
+    const clients = this.server.sockets.sockets
     clients.forEach((socket) => {
       this.#terminate(socket)
-      this.#removeSocket(socket)
     })
   }
 
@@ -122,16 +108,21 @@ export class WebSocketServerAdapter extends NetworkAdapter {
     socket.send(arrayBuf)
   }
 
-  receiveMessage(messageBytes: Uint8Array, socket: WebSocket) {
-    let message: FromClientMessage
+  receiveMessage(messageBytes: Uint8Array, socket: Socket) {
+    let decoded: unknown
     try {
-      message = decode(messageBytes)
+      decoded = decode(messageBytes)
     } catch (e) {
-      log("invalid message received, closing connection")
-      socket.close()
+      log("dropping invalid message payload")
       return
     }
 
+    if (!hasMessageTypeAndSenderId(decoded)) {
+      log("dropping decoded message with invalid envelope")
+      return
+    }
+
+    const message = decoded as FromClientMessage
     const { type, senderId } = message
 
     const myPeerId = this.peerId
@@ -145,9 +136,7 @@ export class WebSocketServerAdapter extends NetworkAdapter {
       const { peerMetadata, supportedProtocolVersions } = message
       const existingSocket = this.sockets[senderId]
       if (existingSocket) {
-        if (existingSocket.readyState === WebSocket.OPEN) {
-          existingSocket.close()
-        }
+        if (existingSocket.connected) existingSocket.disconnect(true)
         this.emit("peer-disconnected", { peerId: senderId })
       }
 
@@ -163,7 +152,7 @@ export class WebSocketServerAdapter extends NetworkAdapter {
           message: "unsupported protocol version",
           targetId: senderId,
         })
-        this.sockets[senderId].close()
+        this.sockets[senderId].disconnect(true)
         delete this.sockets[senderId]
       } else {
         this.send({
@@ -179,19 +168,19 @@ export class WebSocketServerAdapter extends NetworkAdapter {
     }
   }
 
-  #terminate(socket: WebSocketWithIsAlive) {
+  #terminate(socket: Socket) {
     this.#removeSocket(socket)
-    socket.terminate()
+    if (socket.connected) socket.disconnect(true)
   }
 
-  #removeSocket(socket: WebSocketWithIsAlive) {
+  #removeSocket(socket: Socket) {
     const peerId = this.#peerIdBySocket(socket)
     if (!peerId) return
     this.emit("peer-disconnected", { peerId })
     delete this.sockets[peerId as PeerId]
   }
 
-  #peerIdBySocket = (socket: WebSocket) => {
+  #peerIdBySocket = (socket: Socket) => {
     const isThisSocket = (peerId: string) =>
       this.sockets[peerId as PeerId] === socket
     const result = Object.keys(this.sockets).find(isThisSocket) as PeerId
@@ -199,12 +188,10 @@ export class WebSocketServerAdapter extends NetworkAdapter {
   }
 }
 
+export { SocketIOServerAdapter as WebSocketServerAdapter }
+
 const selectProtocol = (versions?: ProtocolVersion[]) => {
   if (versions === undefined) return ProtocolV1
   if (versions.includes(ProtocolV1)) return ProtocolV1
   return null
-}
-
-interface WebSocketWithIsAlive extends WebSocket {
-  isAlive: boolean
 }
