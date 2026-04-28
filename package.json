@@ -1,7 +1,7 @@
 {
   "name": "automerge-sockets-io-adapter",
-  "version": "1.0.0",
-  "description": "Local playground for Automerge + Socket.IO adapter",
+  "version": "0.0.0-beta.0",
+  "description": "Socket.IO network adapter for Automerge Repo",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,16 +14,38 @@
   "files": [
     "dist"
   ],
+  "sideEffects": false,
   "scripts": {
     "build:lib": "tsc -p tsconfig.build.json",
+    "prepack": "pnpm build:lib",
+    "prepublishOnly": "node -e \"if (process.env.npm_config_tag !== 'beta') { console.error('Use npm publish --tag beta --access public'); process.exit(1) }\"",
+    "publish:beta": "npm publish --tag beta --access public",
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "pnpm --filter client dev",
     "dev:server": "pnpm --filter server dev",
     "build": "pnpm build:lib && pnpm --filter client build && pnpm --filter server build",
     "test": "pnpm --filter client test && pnpm --filter server test"
   },
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghostmodd/automerge-sockets.io-adapter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ghostmodd/automerge-sockets.io-adapter/issues"
+  },
+  "homepage": "https://github.com/ghostmodd/automerge-sockets.io-adapter#readme",
+  "keywords": [
+    "automerge",
+    "automerge-repo",
+    "socket.io",
+    "crdt",
+    "network-adapter"
+  ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta"
+  },
   "dependencies": {
     "@automerge/automerge-repo": "^2.5.5",
     "debug": "^4.4.3",
