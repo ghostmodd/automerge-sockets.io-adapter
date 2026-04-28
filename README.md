@@ -1,4 +1,4 @@
-# automerge-sockets-io-adapter
+# @ghostmodd/automerge-sockets-io-adapter
 
 Socket.IO network adapter for [Automerge Repo](https://automerge.org/).
 
@@ -8,7 +8,7 @@ sync through a Socket.IO connection.
 ## Installation
 
 ```sh
-npm install automerge-sockets-io-adapter@beta
+npm install @ghostmodd/automerge-sockets-io-adapter@beta
 ```
 
 ## Usage
@@ -17,7 +17,7 @@ npm install automerge-sockets-io-adapter@beta
 
 ```ts
 import { Repo } from "@automerge/automerge-repo"
-import { SocketIOClientAdapter } from "automerge-sockets-io-adapter"
+import { SocketIOClientAdapter } from "@ghostmodd/automerge-sockets-io-adapter"
 
 const repo = new Repo({
   network: [new SocketIOClientAdapter("http://localhost:3000")],
@@ -29,7 +29,7 @@ const repo = new Repo({
 ```ts
 import { Repo } from "@automerge/automerge-repo"
 import { Server } from "socket.io"
-import { SocketIOServerAdapter } from "automerge-sockets-io-adapter"
+import { SocketIOServerAdapter } from "@ghostmodd/automerge-sockets-io-adapter"
 
 const io = new Server(httpServer, {
   cors: { origin: "*" },

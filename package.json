@@ -1,5 +1,5 @@
 {
-  "name": "automerge-sockets-io-adapter",
+  "name": "@ghostmodd/automerge-sockets-io-adapter",
   "version": "0.0.0-beta.0",
   "description": "Socket.IO network adapter for Automerge Repo",
   "type": "module",
